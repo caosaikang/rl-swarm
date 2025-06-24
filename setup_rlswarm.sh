@@ -43,3 +43,12 @@ echo "或："
 echo "  pip install -e '.[dev,swarm]'"
 
 echo "✨ 依赖安装完成"
+
+git clone https://github.com/caosaikang/rl-swarm.git
+
+echo "✨ 项目克隆安装完成"
+cd rl-swarm
+echo "✅ 进入rl-swarm工作目录，开始运行rl-swarm"
+python3 -m venv .venv
+source .venv/bin/activate
+./run_rl_swarm.sh
