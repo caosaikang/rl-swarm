@@ -28,15 +28,4 @@ max_completion_length: 1024
 # Logging arguments
 logging_strategy: steps
 logging_steps: 2
-report_to:
-- wandb
-save_strategy: "steps"
-save_steps: 25
-seed: 42
-
-# Script arguments
-max_rounds: 10000
-
-# Model-specific arguments
-model_name_or_path: unsloth/Qwen2.5-0.5B-Instruct
-output_dir: runs/gsm8k/multinode/Qwen2.5-0.5B-Instruct-Gensyn-Swarm
+rep
