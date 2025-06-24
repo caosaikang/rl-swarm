@@ -16,15 +16,6 @@ fi
 echo "🔩 安装构建工具（cmake / rust / libomp）..."
 brew install cmake rust libomp
 
-# 安装 Python 环境管理器（推荐 pyenv）
-echo "🐍 安装 pyenv 和 Python..."
-brew install pyenv
-pyenv install 3.11.8 -s
-pyenv virtualenv 3.11.8 rl-swarm-env
-eval "$(pyenv init -)"
-eval "$(pyenv virtualenv-init -)"
-pyenv activate rl-swarm-env
-
 # 升级 pip & 安装 setuptools-wheel
 pip install --upgrade pip setuptools wheel
 
