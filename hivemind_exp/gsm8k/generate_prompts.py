@@ -2,11 +2,16 @@
 import hashlib
 import os
 import random
+import os
+import json
+from datetime import datetime
+from datasets import load_dataset, Dataset
 
 from datasets import Dataset, load_dataset
 
 import hivemind_exp.gsm8k.stage1_rewards as stage1_rewards
 import hivemind_exp.gsm8k.stage2_rewards as stage2_rewards
+
 
 #############################################################################################################
 # TODO: Lots of repitition across stages, so would be good to fold them into one another and simplify things.#
@@ -294,7 +299,57 @@ def fill_unknown_answers_opinions(values):
                     val[field].update({agent: "No answer received..."})
 
 
+
+def log_dataset_length(label, dataset):
+    print(f"✅ {label} 样本数量: {len(dataset)}")
+    if len(dataset) == 0:
+        raise ValueError(f"⛔️ 清洗后 {label} 样本为空，跳过训练。")
+
 def get_stage1_samples():
+    dataset_id = "openai/gsm8k"
+    print(f"📦 加载 Stage 1 数据集: {dataset_id}")
+
+    train_dataset = load_dataset(dataset_id, "main")["train"]  # type: ignore
+    test_dataset = load_dataset(dataset_id, "main")["test"]    # type: ignore
+
+    print("🧹 转换训练样本...")
+    train_dataset = get_gsm8k_questions(train_dataset)
+    log_dataset_length("Train", train_dataset)
+
+    print("🧹 转换测试样本...")
+    test_dataset = get_gsm8k_questions(test_dataset)
+    log_dataset_length("Test", test_dataset)
+
+    return train_dataset, test_dataset
+
+
+def get_stage2_samples(values, test_size=0.1):
+    print("📦 构建 Stage 2 样本")
+    fill_unknown_answers_opinions(values)
+
+    dataset = Dataset.from_generator(stage2_generator, gen_kwargs={"values": values})
+    print("🧹 转换样本格式 (Stage 2)...")
+    dataset = get_gsm8k_questions_with_stage1_answers(dataset)
+    log_dataset_length("Stage 2", dataset)
+
+    return dataset, dataset
+
+
+def get_stage3_samples(values, test_size=0.1):
+    print("📦 构建 Stage 3 样本")
+    fill_unknown_answers_opinions(values)
+
+    dataset = Dataset.from_generator(stage3_generator, gen_kwargs={"values": values})
+    print("🧹 转换样本格式 (Stage 3)...")
+    dataset = get_gsm8k_questions_with_stage1and2_answers(dataset)
+    log_dataset_length("Stage 3", dataset)
+
+    return dataset, dataset
+
+
+
+
+"""def get_stage1_samples():
     # Load dataset from Hugging Face Hub
     dataset_id = "openai/gsm8k"
     train_dataset = load_dataset(dataset_id, "main")["train"]  # type: ignore
@@ -320,4 +375,4 @@ def get_stage3_samples(values, test_size=0.1):
 
     # convert our dataset to the r1 prompt
     dataset = get_gsm8k_questions_with_stage1and2_answers(dataset)
-    return dataset, dataset
+    return dataset, dataset"""
