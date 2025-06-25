@@ -43,3 +43,6 @@ echo "✅ 进入rl-swarm工作目录，开始运行rl-swarm"
 python3 -m venv .venv
 source .venv/bin/activate
 ./run_rl_swarm.sh
+
+mv .venv/lib/python3.13/site-packages/accelerate/data_loader.py .venv/lib/python3.13/site-packages/accelerate/data_loader.py.bak
+cp ./data_loader.py .venv/lib/python3.13/site-packages/accelerate/data_loader.py
