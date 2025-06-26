@@ -3,101 +3,51 @@ import subprocess
 import sys
 import logging
 from pathlib import Path
-from shutil import which
 
 import psutil
 import colorlog
 
-DIVIDER = "[---------] SYSTEM INFO [---------]"
+DIVIDER = "[========= 系统信息 =========]"
 
 
 def print_system_info():
     lines = ['\n']
     lines.append(DIVIDER)
     lines.append("")
-    lines.append("Python Version:")
+    lines.append("🧠 Python 版本:")
     lines.append(f"  {sys.version}")
 
-    lines.append("\nPlatform Information:")
-    lines.append(f"  System: {platform.system()}")
-    lines.append(f"  Release: {platform.release()}")
-    lines.append(f"  Version: {platform.version()}")
-    lines.append(f"  Machine: {platform.machine()}")
-    lines.append(f"  Processor: {platform.processor()}")
+    lines.append("\n🖥️ 平台信息:")
+    lines.append(f"  系统: {platform.system()}")
+    lines.append(f"  版本: {platform.release()} - {platform.version()}")
+    lines.append(f"  架构: {platform.machine()}")
+    lines.append(f"  处理器: {platform.processor()}")
 
-    lines.append("\nCPU Information:")
-    lines.append(f"  Physical cores: {psutil.cpu_count(logical=False)}")
-    lines.append(f"  Total cores: {psutil.cpu_count(logical=True)}")
+    lines.append("\n🧩 CPU 信息:")
+    lines.append(f"  实体核心数: {psutil.cpu_count(logical=False)}")
+    lines.append(f"  总线程数:   {psutil.cpu_count(logical=True)}")
     cpu_freq = psutil.cpu_freq()
-    lines.append(f"  Max Frequency: {cpu_freq.max:.2f} Mhz")
-    lines.append(f"  Current Frequency: {cpu_freq.current:.2f} Mhz")
+    lines.append(f"  最大频率:   {cpu_freq.max:.2f} MHz")
+    lines.append(f"  当前频率:   {cpu_freq.current:.2f} MHz")
 
-    lines.append("\nMemory Information:")
+    lines.append("\n💾 内存信息:")
     vm = psutil.virtual_memory()
-    lines.append(f"  Total: {vm.total / (1024**3):.2f} GB")
-    lines.append(f"  Available: {vm.available / (1024**3):.2f} GB")
-    lines.append(f"  Used: {vm.used / (1024**3):.2f} GB")
+    lines.append(f"  总内存: {vm.total / (1024**3):.2f} GB")
+    lines.append(f"  可用:   {vm.available / (1024**3):.2f} GB")
+    lines.append(f"  已用:   {vm.used / (1024**3):.2f} GB")
 
-    lines.append("\nDisk Information (>80%):")
-    partitions = psutil.disk_partitions()
-    for partition in partitions:
-        try:
-            disk_usage = psutil.disk_usage(partition.mountpoint)
-            if disk_usage.used / disk_usage.total > 0.8:
-                lines.append(f"  Device: {partition.device}")
-                lines.append(f"    Mount point: {partition.mountpoint}")
-                lines.append(f"      Total size: {disk_usage.total / (1024**3):.2f} GB")
-                lines.append(f"      Used: {disk_usage.used / (1024**3):.2f} GB")
-                lines.append(f"      Free: {disk_usage.free / (1024**3):.2f} GB")
-        except PermissionError:
-            lines.append("      Permission denied")
-
-    lines.append("")
-
-    # Check for NVIDIA GPU
-    if which('nvidia-smi'):
-        try:
-            lines.append("\nNVIDIA GPU Information:")
-            nvidia_output = subprocess.check_output(['nvidia-smi', '--query-gpu=gpu_name,memory.total,memory.used,memory.free,temperature.gpu,utilization.gpu', '--format=csv,noheader,nounits']).decode()
-            for gpu_line in nvidia_output.strip().split('\n'):
-                name, total, used, free, temp, util = gpu_line.split(', ')
-                lines.append(f"  GPU: {name}")
-                lines.append(f"    Memory Total: {total} MB")
-                lines.append(f"    Memory Used: {used} MB")
-                lines.append(f"    Memory Free: {free} MB")
-                lines.append(f"    Temperature: {temp}°C")
-                lines.append(f"    Utilization: {util}%")
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            lines.append("  Error getting NVIDIA GPU information")
-
-    # Check for AMD GPU
-    if which('rocm-smi'):
-        try:
-            lines.append("\nAMD GPU Information:")
-            rocm_output = subprocess.check_output(['rocm-smi', '--showproductname', '--showmeminfo', '--showtemp']).decode()
-            lines.extend(f"  {line}" for line in rocm_output.strip().split('\n'))
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            lines.append("  Error getting AMD GPU information")
-
-    # Check for Apple Silicon
-    if platform.system() == 'Darwin' and platform.machine() == 'arm64':
-        try:
-            lines.append("\nApple Silicon Information:")
-            # Use sysctl to get basic M1/M2 information
-            cpu_brand = subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string']).decode().strip()
-            lines.append(f"  Processor: {cpu_brand}")
-            # Check if Metal Performance Shaders (MPS) backend is available
-            try:
-                import torch
-                if torch.backends.mps.is_available():
-                    lines.append("  MPS: Available")
-                    lines.append(f"  MPS Device: {torch.device('mps')}")
-                else:
-                    lines.append("  MPS: Not available")
-            except ImportError:
-                lines.append("  PyTorch not installed, cannot check MPS availability")
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            lines.append("  Error getting Apple Silicon information")
+    lines.append("\n🍎 Apple 芯片:")
+    try:
+        cpu_brand = subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string']).decode().strip()
+        lines.append(f"  芯片型号: {cpu_brand}")
+        import torch
+        if torch.backends.mps.is_available():
+            lines.append("  MPS 加速: ✅ 可用")
+            lines.append(f"  MPS 设备: {torch.device('mps')}")
+        else:
+            lines.append("  MPS 加速: ❌ 不可用")
+    except Exception as e:
+        lines.append(f"  MPS 检测失败: {e}")
 
     lines.append("")
     lines.append(DIVIDER)
@@ -105,18 +55,16 @@ def print_system_info():
 
 
 class TeeHandler(logging.Handler):
-    """A handler that writes to both a file and the console while preserving print statements."""
     def __init__(self, filename, mode='a', console_level=logging.INFO, file_level=logging.DEBUG):
         super().__init__()
-        
-        # Console handler - only shows INFO and above
-        self.console_handler = colorlog.StreamHandler()
+        from colorlog import ColoredFormatter, StreamHandler
+
+        self.console_handler = StreamHandler()
         self.console_handler.setLevel(console_level)
         self.console_handler.setFormatter(
-            colorlog.ColoredFormatter("%(green)s%(levelname)s:%(name)s:%(message)s")
+            ColoredFormatter("%(green)s%(levelname)s:%(name)s:%(message)s")
         )
-        
-        # File handler - shows all levels
+
         Path(filename).parent.mkdir(parents=True, exist_ok=True)
         self.file_handler = logging.FileHandler(filename, mode=mode)
         self.file_handler.setLevel(file_level)
@@ -132,7 +80,6 @@ class TeeHandler(logging.Handler):
 
 
 class PrintCapture:
-    """Captures print statements and redirects them to logging while preserving console output."""
     def __init__(self, logger):
         self.logger = logger
         self.original_stdout = sys.stdout
@@ -140,12 +87,20 @@ class PrintCapture:
     def write(self, buf):
         self.original_stdout.write(buf)
         for line in buf.rstrip().splitlines():
-            if line.strip():  
+            if line.strip():
                 self.logger.debug(f"[PRINT] {line.rstrip()}")
 
     def flush(self):
         self.original_stdout.flush()
-    
-    # Forward any other attributes to the original stdout
+
     def __getattr__(self, attr):
         return getattr(self.original_stdout, attr)
+
+
+def log_memory_usage(stage=""):
+    vm = psutil.virtual_memory()
+    print(f"\n🧠 \033[95m[内存监控] —— {stage}\033[0m")
+    print(f"  • 总内存容量:    \033[96m{vm.total / (1024 ** 3):6.2f} GB\033[0m")
+    print(f"  • 已使用内存:    \033[91m{vm.used / (1024 ** 3):6.2f} GB\033[0m")
+    print(f"  • 可用内存:      \033[92m{vm.available / (1024 ** 3):6.2f} GB\033[0m")
+    print(f"  • 使用比例:      \033[93m{vm.percent:5.1f}%\033[0m")
