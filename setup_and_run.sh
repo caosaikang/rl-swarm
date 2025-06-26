@@ -41,10 +41,6 @@ if [[ -f /opt/homebrew/bin/brew ]]; then
     echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 fi
 
-# 强制设置 bottles 镜像为清华（保险起见）
-export HOMEBREW_BOTTLE_DOMAIN=https://mirrors.tuna.tsinghua.edu.cn/homebrew-bottles
-
-
 # ===== 安装 Python 和 Node.js（如未安装）=====
 brew install python@3.13 nodejs
 
