@@ -41,8 +41,21 @@ if [[ -f /opt/homebrew/bin/brew ]]; then
     echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 fi
 
+
 # ===== 安装 Python 和 Node.js（如未安装）=====
-brew install python@3.13 nodejs
+brew install python@3.10.13 nodejs
+
+# ===== 创建并激活虚拟环境 =====
+log "创建 Python 虚拟环境..."
+python3 -m venv .venv
+source .venv/bin/activate
+success "虚拟环境已激活"
+
+npm config set registry https://registry.npmmirror.com/
+
+# ===== 配置镜像源（加速 pip/yarn 安装）=====
+log "配置 PyPI 清华源..."
+pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
 # ===== 安装 Yarn（如未安装）=====
 if ! command -v yarn &>/dev/null; then
@@ -58,18 +71,9 @@ else
     success "系统已安装 Yarn"
 fi
 
-# ===== 创建并激活虚拟环境 =====
-log "创建 Python 虚拟环境..."
-python3 -m venv .venv
-source .venv/bin/activate
-success "虚拟环境已激活"
-
-# ===== 配置镜像源（加速 pip/yarn 安装）=====
-log "配置 PyPI 清华源..."
-pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
-
-log "配置 Yarn 镜像..."
+# 配置 Yarn 使用国内源（npm 镜像）
 yarn config set registry https://registry.npmmirror.com
+
 
 # ===== 启动训练脚本 =====
 log "启动 Swarm 主脚本..."
