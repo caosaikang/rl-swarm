@@ -58,16 +58,24 @@ npm config set registry https://registry.npmmirror.com/
 # ===== 安装 Yarn（如未安装）=====
 if ! command -v yarn &>/dev/null; then
     log "安装 Yarn..."
+    
     if command -v corepack &>/dev/null; then
         corepack enable
-        corepack prepare yarn@stable --activate
+        # 尝试使用 corepack 安装，失败则使用 npm 安装
+        if ! corepack prepare yarn@stable --activate; then
+            log "Corepack 安装失败，改用 npm 安装 Yarn..."
+            npm install -g yarn --registry=https://registry.npmmirror.com
+        fi
     else
-        npm install -g yarn
+        log "系统无 corepack，直接用 npm 安装 Yarn..."
+        npm install -g yarn --registry=https://registry.npmmirror.com
     fi
+
     success "Yarn 安装完成"
 else
     success "系统已安装 Yarn"
 fi
+
 
 # ===== 创建并激活虚拟环境 =====
 log "创建 Python 虚拟环境..."
