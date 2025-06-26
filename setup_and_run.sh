@@ -44,6 +44,20 @@ fi
 # ===== 安装 Python 和 Node.js（如未安装）=====
 brew install python@3.13 nodejs
 
+# ===== 安装 Yarn（如未安装）=====
+if ! command -v yarn &>/dev/null; then
+    log "安装 Yarn..."
+    if command -v corepack &>/dev/null; then
+        corepack enable
+        corepack prepare yarn@stable --activate
+    else
+        npm install -g yarn
+    fi
+    success "Yarn 安装完成"
+else
+    success "系统已安装 Yarn"
+fi
+
 # ===== 创建并激活虚拟环境 =====
 log "创建 Python 虚拟环境..."
 python3 -m venv .venv
