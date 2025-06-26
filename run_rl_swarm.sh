@@ -70,8 +70,6 @@ if ! command -v yarn &> /dev/null; then
     npm install -g yarn
 fi
 
-fi
-
 # ===== 启动 modal-login 登录页 =====
 if [ "$CONNECT_TO_TESTNET" = true ]; then
     cd modal-login
