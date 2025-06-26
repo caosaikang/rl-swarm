@@ -18,13 +18,21 @@ cd "$SCRIPT_DIR"
 # ===== 设置 MPS 参数（macOS GPU 相关）=====
 export PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0
 
-# ===== 安装 Xcode 命令行工具（如未安装）=====
+# ===== 安装 Xcode Command Line Tools（如未安装）=====
 if ! xcode-select -p &>/dev/null; then
-    log "安装 Xcode Command Line Tools..."
+    log "未检测到 Xcode Command Line Tools，准备安装..."
     xcode-select --install || true
+
+    log "等待 Xcode Command Line Tools 安装完成..."
+    while ! xcode-select -p &>/dev/null; do
+        sleep 5
+        echo -n "."
+    done
+    success "Xcode Command Line Tools 安装完成"
 else
     success "Xcode 已安装"
 fi
+
 
 # ===== Homebrew 安装与国内镜像配置（支持首次一键安装）=====
 if ! command -v brew &>/dev/null; then
@@ -41,21 +49,11 @@ if [[ -f /opt/homebrew/bin/brew ]]; then
     echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
 fi
 
-
 # ===== 安装 Python 和 Node.js（如未安装）=====
-brew install python@3.10.13 nodejs
+brew install python@3.13 nodejs
 
-# ===== 创建并激活虚拟环境 =====
-log "创建 Python 虚拟环境..."
-python3 -m venv .venv
-source .venv/bin/activate
-success "虚拟环境已激活"
-
+log "配置 npm 国内源..."
 npm config set registry https://registry.npmmirror.com/
-
-# ===== 配置镜像源（加速 pip/yarn 安装）=====
-log "配置 PyPI 清华源..."
-pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
 # ===== 安装 Yarn（如未安装）=====
 if ! command -v yarn &>/dev/null; then
@@ -71,9 +69,15 @@ else
     success "系统已安装 Yarn"
 fi
 
-# 配置 Yarn 使用国内源（npm 镜像）
-yarn config set registry https://registry.npmmirror.com
+# ===== 创建并激活虚拟环境 =====
+log "创建 Python 虚拟环境..."
+python3 -m venv .venv
+source .venv/bin/activate
+success "虚拟环境已激活"
 
+# ===== 配置镜像源（加速 pip/yarn 安装）=====
+log "配置 PyPI 清华源..."
+pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
 
 # ===== 启动训练脚本 =====
 log "启动 Swarm 主脚本..."
