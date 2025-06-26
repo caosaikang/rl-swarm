@@ -78,7 +78,9 @@ if [ "$CONNECT_TO_TESTNET" = true ]; then
     fi
 
     echo_blue "🔧 构建 modal-login 前端页面中..."
-    yarn install --immutable
+    # 自动安装依赖（兼容 Yarn v2/v3/v4，避免锁文件报错）
+    yarn config set enableImmutableInstalls false
+    yarn install
     yarn build >> "$LOG_DIR/yarn.log" 2>&1
 
     echo_blue "🚀 启动 modal-login 服务..."
