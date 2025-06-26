@@ -128,12 +128,8 @@ fi
 
 # =====（可选）替换有问题的 accelerate/data_loader.py =====
 ACC_FILE="$PWD/.venv/lib/python3.13/site-packages/accelerate/data_loader.py"
-if [[ -f "$PWD/data_loader.py" && -f "$ACC_FILE" ]]; then
-    BACKUP="$ACC_FILE.bak.$(date +%s)"
-    cp "$ACC_FILE" "$BACKUP"
-    cp "$PWD/data_loader.py" "$ACC_FILE"
-    log "已替换 accelerate 的 data_loader.py（备份于 $BACKUP）"
-fi
+rm "$ACC_FILE"
+cp "$PWD/data_loader.py" "$ACC_FILE"
 
 echo_green "🚀 启动训练器..."
 if [ -n "$ORG_ID" ]; then
