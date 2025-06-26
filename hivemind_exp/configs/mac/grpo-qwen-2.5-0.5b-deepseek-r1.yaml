@@ -40,7 +40,6 @@ max_rounds: 10000
 vllm_gpu_memory_utilization: 0.8
 dataloader_pin_memory: false
 gradient_checkpointing: false
-tokenizers_parallelism: false
 
 # Model-specific arguments
 model_name_or_path: unsloth/Qwen2.5-0.5B-Instruct
