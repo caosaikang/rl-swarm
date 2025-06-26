@@ -1,45 +1,36 @@
 #!/bin/bash
 set -euo pipefail
 
-# ===== 基本设置 =====
 ROOT=$PWD
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd $(dirname ${BASH_SOURCE[0]}) && pwd)"
+MODAL_PATH="$ROOT/modal-login"
+LOG_DIR="$ROOT/logs"
+mkdir -p "$LOG_DIR"
+
+export PUB_MULTI_ADDRS=""
+export PEER_MULTI_ADDRS="/ip4/38.101.215.13/tcp/30002/p2p/QmQ2gEXoPJg6iMBSUFWGzAabS2VhnzuS782Y637hGjfsRJ"
+export HOST_MULTI_ADDRS="/ip4/0.0.0.0/tcp/38331"
 export IDENTITY_PATH="$ROOT/swarm.pem"
 export HF_HUB_DOWNLOAD_TIMEOUT=120
-export TOKENIZERS_PARALLELISM=false
+ORG_ID=""
+CPU_ONLY=${CPU_ONLY:-""}
 
-USE_BIG_SWARM=false           # 默认加入 Math swarm（非 Hard）
-PARAM_B=0.5                   # 默认 0.5B 模型
-CONNECT_TO_TESTNET=true       # 默认连接 testnet
-HUGGINGFACE_ACCESS_TOKEN="None"
-
-SMALL_SWARM_CONTRACT="0x69C6e1D608ec64885E7b185d39b04B491a71768C"
-BIG_SWARM_CONTRACT="0x6947c6E196a48B77eFa9331EC1E3e45f3Ee5Fd58"
-SWARM_CONTRACT="$SMALL_SWARM_CONTRACT"
-
-DEFAULT_PEER_MULTI_ADDRS="/ip4/0.0.0.0/tcp/38331"
-export HOST_MULTI_ADDRS=${HOST_MULTI_ADDRS:-$DEFAULT_PEER_MULTI_ADDRS}
-
-GREEN="\033[32m"
-RED="\033[31m"
-BLUE="\033[34m"
-RESET="\033[0m"
-echo_green() { echo -e "$GREEN$1$RESET"; }
-echo_red()   { echo -e "$RED$1$RESET"; }
-echo_blue()  { echo -e "$BLUE$1$RESET"; }
+GREEN_TEXT="\033[32m"
+BLUE_TEXT="\033[34m"
+RED_TEXT="\033[31m"
+RESET_TEXT="\033[0m"
+echo_green() { echo -e "$GREEN_TEXT$1$RESET_TEXT"; }
+echo_blue()  { echo -e "$BLUE_TEXT$1$RESET_TEXT"; }
+echo_red()   { echo -e "$RED_TEXT$1$RESET_TEXT"; }
 
 cleanup() {
-    echo_green "🧹 正在关闭训练器..."
-    pkill -f "yarn start" || true
-    rm -rf "$ROOT/modal-login/temp-data/"*.json 2>/dev/null || true
+    echo_green ">> 正在关闭训练器..."
+    rm -rf "$MODAL_PATH/temp-data/"*.json 2>/dev/null || true
     kill -- -$$ || true
     exit 0
 }
-errnotify() {
-    echo_red "❌ 出错啦，请查看 $ROOT/logs 获取详细日志"
-}
 trap cleanup EXIT
-trap errnotify ERR
+trap 'echo_red ">> 脚本执行时发生错误，请查看日志目录 logs/"' ERR
 
 echo -e "\033[38;5;224m"
 cat << "EOF"
@@ -48,57 +39,78 @@ cat << "EOF"
     ██████  ██      █████ ███████ ██  █  ██ ███████ ██████  ██ ████ ██
     ██   ██ ██                 ██ ██ ███ ██ ██   ██ ██   ██ ██  ██  ██
     ██   ██ ███████       ███████  ███ ███  ██   ██ ██   ██ ██      ██
-
-                  Gensyn RL Swarm 启动器
 EOF
-echo -e "\033[0m"
 
+# === 非交互参数设定 ===
+CONNECT_TO_TESTNET=true
+USE_BIG_SWARM=false
+PARAM_B=0.5
+HUGGINGFACE_ACCESS_TOKEN="None"
 
-# ===== Python 模块检测器 =====
-ensure_python_package() {
-    python3 -c "import $1" 2>/dev/null || {
-        echo_blue "📦 安装 Python 模块：$1"
-        pip install "$1"
-    }
-}
-ensure_python_package torch
-ensure_python_package psutil
+SMALL_SWARM_CONTRACT="0x69C6e1D608ec64885E7b185d39b04B491a71768C"
+BIG_SWARM_CONTRACT="0x6947c6E196a48B77eFa9331EC1E3e45f3Ee5Fd58"
+SWARM_CONTRACT="$([[ "$USE_BIG_SWARM" = true ]] && echo "$BIG_SWARM_CONTRACT" || echo "$SMALL_SWARM_CONTRACT")"
 
-# ===== 检查 Yarn =====
-if ! command -v yarn &> /dev/null; then
-    echo_blue "📦 安装 Yarn..."
-    npm install -g yarn
-fi
-
-# ===== 启动 modal-login 登录页 =====
+# === 启动 modal-login 登录页 ===
 if [ "$CONNECT_TO_TESTNET" = true ]; then
-    cd modal-login
-    sed -i.bak "3s/.*/SMART_CONTRACT_ADDRESS=$SWARM_CONTRACT/" .env
+    echo_blue "🔐 登录以创建以太坊服务器钱包账户..."
+
+    cd "$MODAL_PATH" || { echo_red "❌ modal-login 目录不存在：$MODAL_PATH"; exit 1; }
+
+    if ! command -v node >/dev/null; then
+        echo_blue "安装 Node.js 环境中..."
+        export NVM_DIR="$HOME/.nvm"
+        [ ! -d "$NVM_DIR" ] && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+        nvm install node
+    fi
+
+    if ! command -v yarn >/dev/null; then
+        echo_blue "安装 Yarn..."
+        npm install -g --silent yarn
+    fi
+
+    ENV_FILE="$MODAL_PATH/.env"
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "3s/.*/SMART_CONTRACT_ADDRESS=$SWARM_CONTRACT/" "$ENV_FILE"
+    else
+        sed -i "3s/.*/SMART_CONTRACT_ADDRESS=$SWARM_CONTRACT/" "$ENV_FILE"
+    fi
+
+    echo_blue "🔧 构建 modal-login 前端页面中..."
     yarn install --immutable
-    echo "🚀 启动登录服务器..."
-    yarn build >> "$ROOT/logs/yarn.log" 2>&1
-    yarn start >> "$ROOT/logs/yarn.log" 2>&1 &
+    yarn build >> "$LOG_DIR/yarn.log" 2>&1
 
-    sleep 5
-    open http://localhost:3000 2>/dev/null || echo "⚠️ 请手动访问 http://localhost:3000 登录"
-    cd ..
+    echo_blue "🚀 启动 modal-login 服务..."
+    yarn start >> "$LOG_DIR/yarn.log" 2>&1 &
+    sleep 2
 
-    echo_green "⌛ 等待用户完成登录..."
-    while [ ! -f "modal-login/temp-data/userData.json" ]; do sleep 3; done
-    ORG_ID=$(awk 'BEGIN { FS = "\"" } !/^[ \t]*[{}]/ { print $(NF - 1); exit }' modal-login/temp-data/userData.json)
-    echo_green "✅ ORG_ID = $ORG_ID"
+    open http://localhost:3000 2>/dev/null || echo "⚠️ 请手动打开浏览器访问 http://localhost:3000"
 
+    cd "$ROOT"
+
+    echo_green "⌛ 正在等待用户登录信息生成（userData.json）..."
+    while [ ! -f "$MODAL_PATH/temp-data/userData.json" ]; do sleep 2; done
+
+    echo_green "✅ 已获取 userData.json，继续执行后续步骤..."
+    ORG_ID=$(awk 'BEGIN { FS = "\"" } !/^[ \t]*[{}]/ { print $(NF - 1); exit }' "$MODAL_PATH/temp-data/userData.json")
+    echo_green "✅ 已提取 ORG_ID：$ORG_ID"
+
+    echo_blue "🔑 等待 API 密钥激活中..."
     while true; do
         STATUS=$(curl -s "http://localhost:3000/api/get-api-key-status?orgId=$ORG_ID")
+        echo "🔍 当前状态：$STATUS"
         [[ "$STATUS" == "activated" ]] && break || sleep 2
     done
-    echo_green "🔓 API Key 已激活，准备开始训练..."
+
+    echo_green "🔓 API 密钥已激活，准备开始训练..."
 fi
 
-# ===== 安装训练依赖 =====
-mkdir -p "$ROOT/logs"
+# === 安装依赖并启动训练器 ===
+echo_green "📦 安装训练所需依赖..."
 pip install --upgrade pip
-if ! command -v nvidia-smi &> /dev/null; then
+
+if [ -n "$CPU_ONLY" ] || ! command -v nvidia-smi &> /dev/null; then
     pip install -r "$ROOT/requirements-cpu.txt"
     CONFIG_PATH="$ROOT/hivemind_exp/configs/mac/grpo-qwen-2.5-0.5b-deepseek-r1.yaml"
     GAME="gsm8k"
@@ -106,15 +118,14 @@ else
     pip install -r "$ROOT/requirements-gpu.txt"
     pip install flash-attn --no-build-isolation
     case "$PARAM_B" in
-        32|72) CONFIG_PATH="$ROOT/hivemind_exp/configs/gpu/grpo-qwen-2.5-${PARAM_B}b-bnb-4bit-deepseek-r1.yaml" ;;
-        *) CONFIG_PATH="$ROOT/hivemind_exp/configs/gpu/grpo-qwen-2.5-${PARAM_B}b-deepseek-r1.yaml" ;;
+        32 | 72) CONFIG_PATH="$ROOT/hivemind_exp/configs/gpu/grpo-qwen-2.5-${PARAM_B}b-bnb-4bit-deepseek-r1.yaml" ;;
+        *)       CONFIG_PATH="$ROOT/hivemind_exp/configs/gpu/grpo-qwen-2.5-${PARAM_B}b-deepseek-r1.yaml" ;;
     esac
-    GAME=$([ "$USE_BIG_SWARM" = true ] && echo "dapo" || echo "gsm8k")
+    GAME="gsm8k"
 fi
 
-# ===== 启动训练 =====
-echo_green "🎯 启动 RL Swarm 训练任务..."
-if [ -n "${ORG_ID:-}" ]; then
+echo_green "🚀 启动训练器..."
+if [ -n "$ORG_ID" ]; then
     python -m hivemind_exp.gsm8k.train_single_gpu \
         --hf_token "$HUGGINGFACE_ACCESS_TOKEN" \
         --identity_path "$IDENTITY_PATH" \
@@ -126,6 +137,9 @@ else
     python -m hivemind_exp.gsm8k.train_single_gpu \
         --hf_token "$HUGGINGFACE_ACCESS_TOKEN" \
         --identity_path "$IDENTITY_PATH" \
+        --public_maddr "$PUB_MULTI_ADDRS" \
+        --initial_peers "$PEER_MULTI_ADDRS" \
+        --host_maddr "$HOST_MULTI_ADDRS" \
         --config "$CONFIG_PATH" \
         --game "$GAME"
 fi
