@@ -26,14 +26,21 @@ else
     success "Xcode 已安装"
 fi
 
-# ===== Homebrew 安装检查 =====
+# ===== Homebrew 安装与国内镜像配置（支持首次一键安装）=====
 if ! command -v brew &>/dev/null; then
-    log "安装 Homebrew..."
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    log "检测到系统未安装 Homebrew，使用 Gitee 脚本执行一键安装..."
+    /bin/zsh -c "$(curl -fsSL https://gitee.com/cunkai/HomebrewCN/raw/master/Homebrew.sh)"
+    success "Homebrew 安装完成"
+else
+    success "系统已安装 Homebrew"
 fi
 
-eval "$(/opt/homebrew/bin/brew shellenv)"
-echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+# 配置 shell 环境变量（确保生效）
+if [[ -f /opt/homebrew/bin/brew ]]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+fi
+
 
 # ===== 安装 Python 和 Node.js（如未安装）=====
 brew install python@3.10.13 nodejs
