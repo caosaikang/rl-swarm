@@ -53,30 +53,6 @@ cat << "EOF"
 EOF
 echo -e "\033[0m"
 
-# ===== 检查 & 安装 Homebrew =====
-if ! command -v brew &> /dev/null; then
-    echo_red "🧃 未检测到 Homebrew，正在安装..."
-    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || {
-        echo_red "❌ Homebrew 安装失败，请手动安装后重试"
-        exit 1
-    }
-    eval "$(/opt/homebrew/bin/brew shellenv)"
-fi
-
-# ===== 检查 Python3 =====
-if ! command -v python3 &> /dev/null; then
-    echo_blue "🐍 安装 Python3 via Homebrew..."
-    brew install python@3.11
-fi
-
-# ===== 检查 pip（如未安装则尝试 ensurepip）=====
-if ! command -v pip &> /dev/null; then
-    echo_blue "🛠 尝试通过 ensurepip 安装 pip..."
-    python3 -m ensurepip --default-pip || {
-        echo_red "❌ pip 无法安装，请尝试手动运行：brew install python 或 curl bootstrap script"
-        exit 1
-    }
-fi
 
 # ===== Python 模块检测器 =====
 ensure_python_package() {
@@ -87,18 +63,6 @@ ensure_python_package() {
 }
 ensure_python_package torch
 ensure_python_package psutil
-
-# ===== 检查 Node.js =====
-if ! command -v node &> /dev/null; then
-    echo_blue "🟢 安装 Node.js（优先 Homebrew）..."
-    brew install node || {
-        echo_blue "🍃 Homebrew 安装失败，尝试使用 NVM..."
-        export NVM_DIR="$HOME/.nvm"
-        [ -d "$NVM_DIR" ] || curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-        [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-        nvm install node
-    }
-fi
 
 # ===== 检查 Yarn =====
 if ! command -v yarn &> /dev/null; then
